@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
+import PhoneInput from '../components/PhoneInput'
+import { FormSectionCard, SubSection, GarantieOption, FieldGrid } from '../components/FormSections'
+import DeformationPreview from '../components/DeformationPreview'
 
 export default function NouvelleDemande() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [currentStep, setCurrentStep] = useState(1)
+  const [showDeformationPreview, setShowDeformationPreview] = useState(false)
   const router = useRouter()
 
   // États pour l'autocomplétion d'adresse
@@ -54,15 +58,24 @@ export default function NouvelleDemande() {
     hauteur: '',
     surface: '',
     ratio: '16:9',
+    ratioCible: '16:9', // NOUVEAU - ratio cible pour mode dimensions
+    dimensionsPratiques: 'exactes', // 'exactes', '10cm', '25cm', '50cm' - NOUVEAU
     distanceVision: '',
     pitchCalcule: '',
     pitchManuel: '',
     pitchMode: 'auto', // 'auto' ou 'manuel'
     typeMedia: '',
     typeEcran: 'standard',
+    typeInstallation: '', // 'fixe' ou 'mobile' - NOUVEAU
+    typeConditionnement: '6', // '6' ou '8' dalles par flight - NOUVEAU
     redondance: false,
     delaisSouhaite: '',
     besoinScaler: '', // 'oui' ou 'non' - NOUVEAU
+    
+    // Garantie et services
+    typeGarantie: '',
+    dureeGarantie: '1',
+    optionsGarantie: [],
     
     // Calculs automatiques
     surfaceCalculee: 0,
@@ -78,6 +91,7 @@ export default function NouvelleDemande() {
     processeurRecommande: null,
     portsNecessaires: 0,
     processeursFiltres: [], // NOUVEAU - processeurs filtrés selon scaler
+    typeConditionnementTexte: '', // NOUVEAU - texte descriptif du conditionnement
   })
 
   useEffect(() => {
@@ -86,7 +100,7 @@ export default function NouvelleDemande() {
 
   useEffect(() => {
     calculerSpecifications()
-  }, [formData.largeur, formData.hauteur, formData.surface, formData.ratio, formData.modeCalcul, formData.distanceVision, formData.pitchCalcule, formData.pitchManuel, formData.pitchMode, formData.redondance, formData.besoinScaler])
+  }, [formData.largeur, formData.hauteur, formData.surface, formData.ratio, formData.modeCalcul, formData.distanceVision, formData.pitchCalcule, formData.pitchManuel, formData.pitchMode, formData.redondance, formData.besoinScaler, formData.typeInstallation, formData.typeConditionnement, formData.dimensionsPratiques])
 
   const checkAuth = async () => {
     console.log('🔍 Vérification auth...')
@@ -149,14 +163,36 @@ export default function NouvelleDemande() {
       const ratioValue = getRatioValue(formData.ratio)
       
       // Calcul mathématique exact selon le ratio
-      hauteurFinal = Math.sqrt(surface / ratioValue)
-      largeurFinal = hauteurFinal * ratioValue
+      const hauteurExacte = Math.sqrt(surface / ratioValue)
+      const largeurExacte = hauteurExacte * ratioValue
       
-      // Dimensions optimales arrondies pour respect du ratio
-      dimensionsOptimales = {
-        largeur: Math.round(largeurFinal * 2) / 2, // Arrondi au 0.5m
-        hauteur: Math.round(hauteurFinal * 2) / 2
+      // Appliquer l'arrondi sélectionné pour les calculs de dalles
+      switch(formData.dimensionsPratiques) {
+        case '10cm':
+          largeurFinal = Math.round(largeurExacte * 10) / 10
+          hauteurFinal = Math.round(hauteurExacte * 10) / 10
+          break
+        case '25cm':
+          largeurFinal = Math.round(largeurExacte * 4) / 4
+          hauteurFinal = Math.round(hauteurExacte * 4) / 4
+          break
+        case '50cm':
+          largeurFinal = Math.round(largeurExacte * 2) / 2
+          hauteurFinal = Math.round(hauteurExacte * 2) / 2
+          break
+        default: // exactes
+          largeurFinal = largeurExacte
+          hauteurFinal = hauteurExacte
       }
+      
+      // Dimensions exactes pour l'affichage des suggestions
+      dimensionsOptimales = {
+        largeur: largeurExacte,
+        hauteur: hauteurExacte
+      }
+      
+      // Ratio reste parfait car on utilise le ratio sélectionné
+      ratioCalcule = ratioValue
     }
     
     // Mode dimensions : calculer le ratio correspondant
@@ -194,7 +230,21 @@ export default function NouvelleDemande() {
     
     // Calcul équipements
     const nombreBumpers = dallesLargeur // Nombre de dalles en largeur
-    const nombreFlightcases = Math.ceil(nombreDalles / 6) // 6 dalles par flightcase
+    
+    // Calcul des flightcases selon le type d'installation
+    let nombreFlightcases = 0
+    let typeConditionnementTexte = ''
+    
+    if (formData.typeInstallation === 'fixe') {
+      // Installation fixe : caisses en bois, conditionnement variable
+      nombreFlightcases = 0 // Sera déterminé selon le projet
+      typeConditionnementTexte = 'Caisses bois sur mesure'
+    } else {
+      // Installation mobile : flightcases standard
+      const dallesParFlight = parseInt(formData.typeConditionnement) || 6
+      nombreFlightcases = Math.ceil(nombreDalles / dallesParFlight)
+      typeConditionnementTexte = `Flightcases (${dallesParFlight} dalles/flight)`
+    }
     
     // Filtrer les processeurs selon scaler
     const processeursFiltres = filtrerProcesseurs(formData.besoinScaler)
@@ -219,6 +269,7 @@ export default function NouvelleDemande() {
       portsNecessaires,
       pitchCalcule: pitchOptimal,
       processeursFiltres,
+      typeConditionnementTexte,
     }))
   }
 
@@ -236,6 +287,84 @@ export default function NouvelleDemande() {
     if (Math.abs(ratioValue - 4/3) < 0.1) return '4:3'
     if (Math.abs(ratioValue - 21/9) < 0.1) return '21:9'
     return `${ratioValue.toFixed(2)}:1`
+  }
+
+  // Analyser la déformation par rapport aux ratios standards
+  const analyserDeformation = (ratioCalcule, ratioCibleOverride = null) => {
+    const ratiosStandards = [
+      { nom: '16:9', valeur: 16/9, usage: 'Standard HD/4K' },
+      { nom: '4:3', valeur: 4/3, usage: 'Classique' },
+      { nom: '21:9', valeur: 21/9, usage: 'Ultra-large cinéma' }
+    ]
+    
+    let plusProche
+    let ecartMin
+    
+    // Si on a un ratio cible spécifique (mode dimensions)
+    if (ratioCibleOverride && ratioCibleOverride !== 'autre') {
+      plusProche = ratiosStandards.find(r => r.nom === ratioCibleOverride)
+      ecartMin = Math.abs(ratioCalcule - plusProche.valeur)
+    } else {
+      // Sinon, trouver le ratio standard le plus proche
+      plusProche = ratiosStandards[0]
+      ecartMin = Math.abs(ratioCalcule - ratiosStandards[0].valeur)
+      
+      ratiosStandards.forEach(ratio => {
+        const ecart = Math.abs(ratioCalcule - ratio.valeur)
+        if (ecart < ecartMin) {
+          ecartMin = ecart
+          plusProche = ratio
+        }
+      })
+    }
+    
+    // Calculer le pourcentage d'écart
+    const pourcentageEcart = (ecartMin / plusProche.valeur * 100).toFixed(1)
+    
+    // Analyser le niveau de déformation
+    if (pourcentageEcart < 2) {
+      return (
+        <div className="mt-2">
+          <p className="text-sm text-green-600 font-medium">
+            ✅ Ratio {plusProche.nom} ({plusProche.usage}) - Écart : {pourcentageEcart}%
+          </p>
+          <p className="text-xs text-green-600">Aucune déformation visible, ratio optimal</p>
+        </div>
+      )
+    } else if (pourcentageEcart < 5) {
+      return (
+        <div className="mt-2">
+          <p className="text-sm text-blue-600 font-medium">
+            🔵 Proche du {plusProche.nom} ({plusProche.usage}) - Écart : {pourcentageEcart}%
+          </p>
+          <p className="text-xs text-blue-600">Déformation minime, à peine perceptible</p>
+        </div>
+      )
+    } else if (pourcentageEcart < 10) {
+      return (
+        <div className="mt-2">
+          <p className="text-sm text-orange-600 font-medium">
+            ⚠️ Écart modéré avec {plusProche.nom} - Écart : {pourcentageEcart}%
+          </p>
+          <p className="text-xs text-orange-600">Déformation visible, contenu légèrement étiré/compressé</p>
+          <p className="text-xs text-gray-600 mt-1">
+            💡 Conseil : Ajustez à {(plusProche.valeur * parseFloat(formData.hauteur)).toFixed(2)}m × {formData.hauteur}m pour un ratio {plusProche.nom}
+          </p>
+        </div>
+      )
+    } else {
+      return (
+        <div className="mt-2">
+          <p className="text-sm text-red-600 font-medium">
+            ❌ Forte déformation - Écart : {pourcentageEcart}% avec {plusProche.nom}
+          </p>
+          <p className="text-xs text-red-600">Déformation importante, contenu fortement déformé</p>
+          <p className="text-xs text-gray-600 mt-1">
+            💡 Recommandation : {(plusProche.valeur * parseFloat(formData.hauteur)).toFixed(2)}m × {formData.hauteur}m pour {plusProche.nom}
+          </p>
+        </div>
+      )
+    }
   }
 
   const trouverProcesseurOptimal = (totalPixels, redondance, processeursFiltres) => {
@@ -281,9 +410,29 @@ export default function NouvelleDemande() {
     }
   }
 
+  // Fonctions de formatage
+  const formatNom = (text) => {
+    return text.toUpperCase()
+  }
+
+  const formatPrenom = (text) => {
+    // Gérer les prénoms composés (ex: Jean-Pierre, Marie-Claire)
+    return text
+      .split(/[\s-]/) // Séparer par espaces ou tirets
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(text.includes('-') ? '-' : ' ') // Rejoindre avec le même séparateur
+  }
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
-    const newValue = type === 'checkbox' ? checked : value
+    let newValue = type === 'checkbox' ? checked : value
+    
+    // Formatage automatique pour nom et prénom
+    if (name === 'nomClient') {
+      newValue = formatNom(value)
+    } else if (name === 'prenomClient') {
+      newValue = formatPrenom(value)
+    }
     
     setFormData(prev => ({
       ...prev,
@@ -495,10 +644,13 @@ export default function NouvelleDemande() {
                       <label>Email *</label>
                       <input type="email" name="emailClient" required value={formData.emailClient} onChange={handleInputChange} className="input-tech" placeholder="client@exemple.fr" />
                     </div>
-                    <div>
-                      <label>Téléphone *</label>
-                      <input type="tel" name="telephoneClient" required value={formData.telephoneClient} onChange={handleInputChange} className="input-tech" placeholder="06 12 34 56 78" />
-                    </div>
+                    <PhoneInput
+                      label="Téléphone"
+                      required
+                      value={formData.telephoneClient}
+                      onChange={handleInputChange}
+                      defaultCountry="FR"
+                    />
                   </div>
                 </div>
 
@@ -590,178 +742,528 @@ export default function NouvelleDemande() {
 
           {/* ÉTAPE 2 - Spécifications Techniques */}
           {currentStep === 2 && (
-            <div className="space-y-8">
-              {/* Formulaire spécifications */}
-              <div className="card-tech animate-slideInUp">
-                <div className="p-8">
-                  <div className="flex items-center mb-8">
-                    <div className="w-16 h-16 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center mr-6 shadow-lg">
-                      <span className="text-white text-3xl">🧮</span>
-                    </div>
-                    <div>
-                      <h2 className="text-3xl font-bold text-gray-800 mb-2">Spécifications Techniques</h2>
-                      <p className="text-gray-600 text-lg">Configuration de l'écran LED avec calculs automatiques</p>
-                    </div>
+            <div className="space-y-6">
+              {/* En-tête principale */}
+              <div className="flex items-center mb-8">
+                <div className="w-16 h-16 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center mr-6 shadow-lg">
+                  <span className="text-white text-3xl">🧮</span>
+                </div>
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">Spécifications Techniques</h2>
+                  <p className="text-gray-600 text-lg">Configuration de l'écran LED avec calculs automatiques</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit}>
+                {/* SECTION 1 - Dimensions de l'écran */}
+                <FormSectionCard
+                  title="Dimensions de l'écran"
+                  icon="📐"
+                  iconBg="bg-gradient-to-r from-cyan-500 to-blue-600"
+                >
+                  {/* Mode de calcul */}
+                  <div className="flex space-x-4 mb-6">
+                    <label className="flex items-center cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="modeCalcul" 
+                        value="dimensions" 
+                        checked={formData.modeCalcul === 'dimensions'} 
+                        onChange={handleInputChange} 
+                        className="mr-3" 
+                      />
+                      <span className="font-semibold">Mode 1 : Largeur × Hauteur</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="modeCalcul" 
+                        value="surface" 
+                        checked={formData.modeCalcul === 'surface'} 
+                        onChange={handleInputChange} 
+                        className="mr-3" 
+                      />
+                      <span className="font-semibold">Mode 2 : Surface + Ratio</span>
+                    </label>
                   </div>
 
-                  <form onSubmit={handleSubmit} className="space-y-8">
-
-                    {/* Mode de calcul taille - AMÉLIORÉ */}
-                    <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-200/50 rounded-2xl p-6">
-                      <h3 className="text-xl font-bold text-gray-800 mb-4">📐 Dimensions de l'écran</h3>
-                      <div className="flex space-x-4 mb-6">
-                        <label className="flex items-center cursor-pointer">
-                          <input type="radio" name="modeCalcul" value="dimensions" checked={formData.modeCalcul === 'dimensions'} onChange={handleInputChange} className="mr-3" />
-                          <span className="font-semibold">Mode 1 : Largeur × Hauteur</span>
-                        </label>
-                        <label className="flex items-center cursor-pointer">
-                          <input type="radio" name="modeCalcul" value="surface" checked={formData.modeCalcul === 'surface'} onChange={handleInputChange} className="mr-3" />
-                          <span className="font-semibold">Mode 2 : Surface + Ratio</span>
-                        </label>
+                  {formData.modeCalcul === 'dimensions' ? (
+                    <div>
+                      <FieldGrid columns={2}>
+                        <div>
+                          <label className="block font-bold text-gray-700 mb-2">Largeur (m) *</label>
+                          <input 
+                            type="number" 
+                            step="0.1" 
+                            name="largeur" 
+                            value={formData.largeur} 
+                            onChange={handleInputChange} 
+                            className="input-tech" 
+                            placeholder="4.5" 
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-gray-700 mb-2">Hauteur (m) *</label>
+                          <input 
+                            type="number" 
+                            step="0.1" 
+                            name="hauteur" 
+                            value={formData.hauteur} 
+                            onChange={handleInputChange} 
+                            className="input-tech" 
+                            placeholder="2.5" 
+                          />
+                        </div>
+                      </FieldGrid>
+                      
+                      {/* Sélection du ratio cible */}
+                      <div className="mt-4">
+                        <label className="block font-bold text-gray-700 mb-2">Ratio cible souhaité</label>
+                        <select 
+                          name="ratioCible" 
+                          value={formData.ratioCible} 
+                          onChange={handleInputChange} 
+                          className="input-tech w-full md:w-1/2"
+                        >
+                          <option value="16:9">16:9 (Standard HD/4K)</option>
+                          <option value="4:3">4:3 (Format classique)</option>
+                          <option value="21:9">21:9 (Ultra-large cinéma)</option>
+                          <option value="autre">Autre (accepter le ratio actuel)</option>
+                        </select>
                       </div>
-
-                      {formData.modeCalcul === 'dimensions' ? (
-                        <div>
-                          <div className="grid grid-cols-2 gap-6">
-                            <div><label className="block font-bold text-gray-700 mb-2">Largeur (m) *</label><input type="number" step="0.1" name="largeur" value={formData.largeur} onChange={handleInputChange} className="input-tech" placeholder="4.5" /></div>
-                            <div><label className="block font-bold text-gray-700 mb-2">Hauteur (m) *</label><input type="number" step="0.1" name="hauteur" value={formData.hauteur} onChange={handleInputChange} className="input-tech" placeholder="2.5" /></div>
+                      {formData.ratioCalcule > 0 && (
+                        <>
+                          <div className="mt-4 p-4 bg-white/60 rounded-lg border border-gray-200">
+                            <p className="font-bold text-gray-800">
+                              📏 Surface : {formData.surfaceCalculee.toFixed(2)}m² | Ratio calculé : {formData.ratioCalcule.toFixed(3)}:1
+                            </p>
+                            {analyserDeformation(formData.ratioCalcule, formData.ratioCible)}
                           </div>
-                          {/* NOUVEAU - Affichage du ratio calculé */}
-                          {formData.ratioCalcule > 0 && (
-                            <div className="mt-4 p-4 bg-white/60 rounded-lg">
-                              <p className="font-bold text-gray-800">📏 Surface : {formData.surfaceCalculee.toFixed(2)}m² | Ratio : {getRatioName(formData.ratioCalcule)}</p>
-                              <p className="text-sm text-gray-600 mt-1">
-                                {Math.abs(formData.ratioCalcule - 16/9) < 0.1 ? '✅ Ratio 16:9 parfait' : 
-                                 Math.abs(formData.ratioCalcule - 4/3) < 0.1 ? '✅ Ratio 4:3 parfait' :
-                                 Math.abs(formData.ratioCalcule - 21/9) < 0.1 ? '✅ Ratio 21:9 parfait' : 
-                                 `⚠️ Ratio personnalisé (${formData.ratioCalcule.toFixed(2)}:1)`}
-                              </p>
-                            </div>
+                          {/* Bouton pour afficher/masquer l'aperçu */}
+                          {(() => {
+                            const ratioCibleValue = formData.ratioCible === '16:9' ? 16/9 : 
+                                                   formData.ratioCible === '4:3' ? 4/3 : 
+                                                   formData.ratioCible === '21:9' ? 21/9 : 0;
+                            return formData.ratioCible !== 'autre' && Math.abs(formData.ratioCalcule - ratioCibleValue) > 0.02;
+                          })() && (
+                            <button
+                              type="button"
+                              onClick={() => setShowDeformationPreview(!showDeformationPreview)}
+                              className="mt-3 text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center"
+                            >
+                              <span className="mr-1">{showDeformationPreview ? '🔼' : '🔽'}</span>
+                              {showDeformationPreview ? 'Masquer' : 'Voir'} l'aperçu de la déformation
+                            </button>
                           )}
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="grid grid-cols-2 gap-6">
-                            <div><label className="block font-bold text-gray-700 mb-2">Surface (m²) *</label><input type="number" step="0.1" name="surface" value={formData.surface} onChange={handleInputChange} className="input-tech" placeholder="11.25" /></div>
-                            <div><label className="block font-bold text-gray-700 mb-2">Ratio</label><select name="ratio" value={formData.ratio} onChange={handleInputChange} className="input-tech"><option value="16:9">16:9 (Standard)</option><option value="4:3">4:3 (Classique)</option><option value="21:9">21:9 (Ultra-large)</option></select></div>
-                          </div>
-                          {/* NOUVEAU - Affichage des dimensions optimales */}
-                          {formData.dimensionsOptimales.largeur > 0 && (
-                            <div className="mt-4 p-4 bg-white/60 rounded-lg">
-                              <p className="font-bold text-gray-800">📏 Dimensions optimales : {formData.dimensionsOptimales.largeur.toFixed(1)}m × {formData.dimensionsOptimales.hauteur.toFixed(1)}m</p>
-                              <p className="text-sm text-gray-600 mt-1">✅ Respect parfait du ratio {formData.ratio} avec surface de {formData.surface}m²</p>
-                            </div>
+                          {/* Aperçu visuel de la déformation */}
+                          {showDeformationPreview && (
+                            <DeformationPreview 
+                              largeur={formData.largeur}
+                              hauteur={formData.hauteur}
+                              ratioCalcule={formData.ratioCalcule}
+                            />
                           )}
-                        </div>
+                        </>
                       )}
                     </div>
-
-                    {/* Distance et pitch */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div>
-                        <label className="block text-lg font-bold text-gray-700 mb-3">Distance de vision (m) *</label>
-                        <input type="number" step="0.5" name="distanceVision" value={formData.distanceVision} onChange={handleInputChange} className="input-tech text-lg" placeholder="6" />
-                        <p className="text-sm text-gray-500 mt-2">Distance des premiers spectateurs</p>
-                      </div>
-                      <div>
-                        <label className="block text-lg font-bold text-gray-700 mb-3">Pitch (mm)</label>
-                        <div className="space-y-3">
-                          <label className="flex items-center"><input type="radio" name="pitchMode" value="auto" checked={formData.pitchMode === 'auto'} onChange={handleInputChange} className="mr-2" /><span>Automatique (Distance = Pitch)</span></label>
-                          <label className="flex items-center"><input type="radio" name="pitchMode" value="manuel" checked={formData.pitchMode === 'manuel'} onChange={handleInputChange} className="mr-2" /><span>Manuel</span></label>
+                  ) : (
+                    <div>
+                      <FieldGrid columns={2}>
+                        <div>
+                          <label className="block font-bold text-gray-700 mb-2">Surface (m²) *</label>
+                          <input 
+                            type="number" 
+                            step="0.1" 
+                            name="surface" 
+                            value={formData.surface} 
+                            onChange={handleInputChange} 
+                            className="input-tech" 
+                            placeholder="11.25" 
+                          />
                         </div>
-                        {formData.pitchMode === 'manuel' ? (
-                          <input type="number" step="0.1" name="pitchManuel" value={formData.pitchManuel} onChange={handleInputChange} className="input-tech mt-2" placeholder="6" />
-                        ) : (
-                          <div className="mt-2 p-3 bg-green-100 rounded-lg"><span className="font-bold text-green-800">Pitch calculé : P{formData.pitchCalcule || 6}</span></div>
-                        )}
-                      </div>
-                    </div>
+                        <div>
+                          <label className="block font-bold text-gray-700 mb-2">Ratio</label>
+                          <select name="ratio" value={formData.ratio} onChange={handleInputChange} className="input-tech">
+                            <option value="16:9">16:9 (Standard)</option>
+                            <option value="4:3">4:3 (Classique)</option>
+                            <option value="21:9">21:9 (Ultra-large)</option>
+                          </select>
+                        </div>
+                      </FieldGrid>
+                      
+                      {/* Sélecteur de dimensions pratiques */}
+                      {formData.dimensionsOptimales.largeur > 0 && (
+                        <div className="mt-4">
+                          <label className="block font-bold text-gray-700 mb-2">Dimensions à utiliser pour les calculs</label>
+                          <select 
+                            name="dimensionsPratiques" 
+                            value={formData.dimensionsPratiques} 
+                            onChange={handleInputChange} 
+                            className="input-tech w-full"
+                          >
+                            <option value="exactes">Exactes : {formData.dimensionsOptimales.largeur.toFixed(2)}m × {formData.dimensionsOptimales.hauteur.toFixed(2)}m</option>
+                            <option value="10cm">Arrondi 10cm : {(Math.round(formData.dimensionsOptimales.largeur * 10) / 10).toFixed(1)}m × {(Math.round(formData.dimensionsOptimales.hauteur * 10) / 10).toFixed(1)}m</option>
+                            <option value="25cm">Arrondi 25cm : {(Math.round(formData.dimensionsOptimales.largeur * 4) / 4).toFixed(2)}m × {(Math.round(formData.dimensionsOptimales.hauteur * 4) / 4).toFixed(2)}m</option>
+                            <option value="50cm">Arrondi 50cm : {(Math.round(formData.dimensionsOptimales.largeur * 2) / 2).toFixed(1)}m × {(Math.round(formData.dimensionsOptimales.hauteur * 2) / 2).toFixed(1)}m</option>
+                          </select>
+                        </div>
+                      )}
 
-                    {/* Type de média */}
-                    <div>
-                      <label className="block text-lg font-bold text-gray-700 mb-3">Type de média diffusé</label>
-                      <select name="typeMedia" value={formData.typeMedia} onChange={handleInputChange} className="input-tech text-lg">
-                        <option value="">Sélectionner...</option>
-                        <option value="videos-hd">Vidéos HD/4K</option>
-                        <option value="publicite">Publicité/Communication</option>
-                        <option value="evenementiel">Événementiel/Concert</option>
-                        <option value="retail">Retail/Commerce</option>
-                        <option value="corporate">Corporate/Entreprise</option>
-                        <option value="sport">Sport/Stade</option>
-                        <option value="mapping">Mapping/Artistique</option>
-                      </select>
-                    </div>
-
-                    {/* Type d'écran */}
-                    <div>
-                      <label className="block text-lg font-bold text-gray-700 mb-3">Type d'écran</label>
-                      <select name="typeEcran" value={formData.typeEcran} onChange={handleInputChange} className="input-tech text-lg">
-                        <option value="standard">Écran standard</option>
-                        <option value="cube">Cube LED</option>
-                        <option value="transparent">Transparent</option>
-                        <option value="floor">Dalle de sol</option>
-                        <option value="semi-transparent">Semi-transparent</option>
-                        <option value="flex">Flexible</option>
-                        <option value="curved">Courbé</option>
-                      </select>
-                    </div>
-
-                    {/* NOUVEAU - Question Scaler */}
-                    <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-200/50 rounded-2xl p-6">
-                      <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                        <span className="text-2xl mr-3">🎛️</span>
-                        Besoin d'un scaler ?
-                      </h3>
-                      <p className="text-gray-600 mb-4">Le scaler permet la gestion avancée des sources et la mise à l'échelle des contenus</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <label className="flex items-center cursor-pointer p-4 bg-white/50 rounded-lg border-2 border-transparent hover:border-orange-300 transition-all">
-                          <input type="radio" name="besoinScaler" value="oui" checked={formData.besoinScaler === 'oui'} onChange={handleInputChange} className="mr-3" />
-                          <div>
-                            <span className="font-semibold text-gray-800">Oui, avec scaler</span>
-                            <p className="text-sm text-gray-600">Gammes : VX, MX, H Series</p>
-                          </div>
-                        </label>
-                        <label className="flex items-center cursor-pointer p-4 bg-white/50 rounded-lg border-2 border-transparent hover:border-orange-300 transition-all">
-                          <input type="radio" name="besoinScaler" value="non" checked={formData.besoinScaler === 'non'} onChange={handleInputChange} className="mr-3" />
-                          <div>
-                            <span className="font-semibold text-gray-800">Non, sans scaler</span>
-                            <p className="text-sm text-gray-600">Gammes : MSD, MCTRL</p>
-                          </div>
-                        </label>
-                      </div>
-                      {formData.processeursFiltres.length > 0 && (
-                        <div className="mt-4 p-3 bg-white/70 rounded-lg">
-                          <p className="text-sm font-medium text-gray-700">
-                            {formData.processeursFiltres.length} processeurs disponibles dans cette catégorie
+                      {formData.dimensionsOptimales.largeur > 0 && (
+                        <div className="mt-4 p-4 bg-white/60 rounded-lg border border-gray-200">
+                          <p className="font-bold text-gray-800">
+                            📏 Dimensions pour calculs : {(() => {
+                              const ratioValue = getRatioValue(formData.ratio);
+                              const hauteurExacte = Math.sqrt(parseFloat(formData.surface) / ratioValue);
+                              const largeurExacte = hauteurExacte * ratioValue;
+                              
+                              switch(formData.dimensionsPratiques) {
+                                case '10cm':
+                                  return `${(Math.round(largeurExacte * 10) / 10).toFixed(1)}m × ${(Math.round(hauteurExacte * 10) / 10).toFixed(1)}m`;
+                                case '25cm':
+                                  return `${(Math.round(largeurExacte * 4) / 4).toFixed(2)}m × ${(Math.round(hauteurExacte * 4) / 4).toFixed(2)}m`;
+                                case '50cm':
+                                  return `${(Math.round(largeurExacte * 2) / 2).toFixed(1)}m × ${(Math.round(hauteurExacte * 2) / 2).toFixed(1)}m`;
+                                default:
+                                  return `${largeurExacte.toFixed(2)}m × ${hauteurExacte.toFixed(2)}m`;
+                              }
+                            })()}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            ✅ Surface réelle : {formData.surfaceCalculee.toFixed(2)}m² | Calcul dalles : {formData.dallesLargeur} × {formData.dallesHauteur} = {formData.nombreDalles} dalles
                           </p>
                         </div>
                       )}
                     </div>
+                  )}
+                </FormSectionCard>
 
-                    {/* Options */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* SECTION 2 - Configuration technique */}
+                <FormSectionCard
+                  title="Configuration technique"
+                  icon="⚙️"
+                  iconBg="bg-gradient-to-r from-purple-500 to-pink-600"
+                >
+                  <SubSection title="Pitch et distance de vision">
+                    <FieldGrid columns={2}>
                       <div>
-                        <label className="flex items-center cursor-pointer">
-                          <input type="checkbox" name="redondance" checked={formData.redondance} onChange={handleInputChange} className="mr-3" />
-                          <span className="text-lg font-bold text-gray-700">Redondance nécessaire</span>
-                        </label>
-                        <p className="text-sm text-gray-500 mt-1">Double les équipements pour sécurité</p>
+                        <label className="block font-bold text-gray-700 mb-2">Distance de vision (m) *</label>
+                        <input 
+                          type="number" 
+                          step="0.5" 
+                          name="distanceVision" 
+                          value={formData.distanceVision} 
+                          onChange={handleInputChange} 
+                          className="input-tech" 
+                          placeholder="6" 
+                        />
+                        <p className="text-sm text-gray-500 mt-2">Distance des premiers spectateurs</p>
                       </div>
                       <div>
-                        <label className="block text-lg font-bold text-gray-700 mb-3">Délais souhaités</label>
-                        <input type="text" name="delaisSouhaite" value={formData.delaisSouhaite} onChange={handleInputChange} className="input-tech text-lg" placeholder="Ex: 3 semaines" />
+                        <label className="block font-bold text-gray-700 mb-2">Pitch (mm)</label>
+                        <div className="space-y-3">
+                          <label className="flex items-center">
+                            <input 
+                              type="radio" 
+                              name="pitchMode" 
+                              value="auto" 
+                              checked={formData.pitchMode === 'auto'} 
+                              onChange={handleInputChange} 
+                              className="mr-2" 
+                            />
+                            <span>Automatique (Distance = Pitch)</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input 
+                              type="radio" 
+                              name="pitchMode" 
+                              value="manuel" 
+                              checked={formData.pitchMode === 'manuel'} 
+                              onChange={handleInputChange} 
+                              className="mr-2" 
+                            />
+                            <span>Manuel</span>
+                          </label>
+                        </div>
+                        {formData.pitchMode === 'manuel' ? (
+                          <input 
+                            type="number" 
+                            step="0.1" 
+                            name="pitchManuel" 
+                            value={formData.pitchManuel} 
+                            onChange={handleInputChange} 
+                            className="input-tech mt-2" 
+                            placeholder="6" 
+                          />
+                        ) : (
+                          <div className="mt-2 p-3 bg-green-100 rounded-lg">
+                            <span className="font-bold text-green-800">Pitch calculé : P{formData.pitchCalcule || 6}</span>
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    </FieldGrid>
+                  </SubSection>
 
-                    <div className="flex justify-between pt-8 border-t border-gray-200/50">
-                      <button type="button" onClick={() => setCurrentStep(1)} className="px-8 py-4 bg-white/20 border border-gray-300/50 text-gray-700 rounded-xl hover:bg-white/30 transition-all duration-200 font-semibold text-lg backdrop-blur-sm">← Précédent</button>
-                      <button type="submit" className="btn-primary text-lg px-8 py-4 flex items-center">Finaliser la demande <span className="ml-3 text-xl">✨</span></button>
+                  <SubSection title="Type de média et écran">
+                    <FieldGrid columns={2}>
+                      <div>
+                        <label className="block font-bold text-gray-700 mb-2">Type de média diffusé</label>
+                        <select name="typeMedia" value={formData.typeMedia} onChange={handleInputChange} className="input-tech">
+                          <option value="">Sélectionner...</option>
+                          <option value="videos-hd">Vidéos HD/4K</option>
+                          <option value="publicite">Publicité/Communication</option>
+                          <option value="evenementiel">Événementiel/Concert</option>
+                          <option value="retail">Retail/Commerce</option>
+                          <option value="corporate">Corporate/Entreprise</option>
+                          <option value="sport">Sport/Stade</option>
+                          <option value="mapping">Mapping/Artistique</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block font-bold text-gray-700 mb-2">Type d'écran</label>
+                        <select name="typeEcran" value={formData.typeEcran} onChange={handleInputChange} className="input-tech">
+                          <option value="standard">Écran standard</option>
+                          <option value="cube">Cube LED</option>
+                          <option value="transparent">Transparent</option>
+                          <option value="floor">Dalle de sol</option>
+                          <option value="semi-transparent">Semi-transparent</option>
+                          <option value="flex">Flexible</option>
+                          <option value="curved">Courbé</option>
+                        </select>
+                      </div>
+                    </FieldGrid>
+                  </SubSection>
+
+                  <SubSection title="Type d'installation et conditionnement">
+                    <FieldGrid columns={2}>
+                      <div>
+                        <label className="block font-bold text-gray-700 mb-2">Type d'installation *</label>
+                        <select name="typeInstallation" value={formData.typeInstallation} onChange={handleInputChange} className="input-tech">
+                          <option value="">Sélectionner...</option>
+                          <option value="mobile">Installation mobile/événementiel</option>
+                          <option value="fixe">Installation fixe/permanente</option>
+                        </select>
+                      </div>
+                      {formData.typeInstallation === 'mobile' && (
+                        <div>
+                          <label className="block font-bold text-gray-700 mb-2">Dalles par flightcase</label>
+                          <select name="typeConditionnement" value={formData.typeConditionnement} onChange={handleInputChange} className="input-tech">
+                            <option value="6">6 dalles par flightcase (standard)</option>
+                            <option value="8">8 dalles par flightcase (optimisé)</option>
+                          </select>
+                        </div>
+                      )}
+                    </FieldGrid>
+                    
+                    {formData.typeInstallation && (
+                      <div className="mt-4 p-4 bg-white/60 rounded-lg border border-gray-200">
+                        <p className="text-sm text-gray-700">
+                          <span className="font-semibold">ℹ️ Information :</span>
+                          {formData.typeInstallation === 'mobile' 
+                            ? ' Utilisation de flightcases standards pour transport'
+                            : ' Conditionnement en caisses bois sur mesure selon projet'
+                          }
+                        </p>
+                      </div>
+                    )}
+                  </SubSection>
+                </FormSectionCard>
+
+                {/* SECTION 3 - Options matériel */}
+                <FormSectionCard
+                  title="Options matériel"
+                  icon="🎛️"
+                  iconBg="bg-gradient-to-r from-orange-500 to-red-600"
+                >
+                  <SubSection title="Besoin d'un scaler ?">
+                    <p className="text-gray-600 mb-4">Le scaler permet la gestion avancée des sources et la mise à l'échelle des contenus</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <label className="flex items-center cursor-pointer p-4 bg-white/50 rounded-lg border-2 border-transparent hover:border-orange-300 transition-all">
+                        <input 
+                          type="radio" 
+                          name="besoinScaler" 
+                          value="oui" 
+                          checked={formData.besoinScaler === 'oui'} 
+                          onChange={handleInputChange} 
+                          className="mr-3" 
+                        />
+                        <div>
+                          <span className="font-semibold text-gray-800">Oui, avec scaler</span>
+                          <p className="text-sm text-gray-600">Gammes : VX, MX, H Series</p>
+                        </div>
+                      </label>
+                      <label className="flex items-center cursor-pointer p-4 bg-white/50 rounded-lg border-2 border-transparent hover:border-orange-300 transition-all">
+                        <input 
+                          type="radio" 
+                          name="besoinScaler" 
+                          value="non" 
+                          checked={formData.besoinScaler === 'non'} 
+                          onChange={handleInputChange} 
+                          className="mr-3" 
+                        />
+                        <div>
+                          <span className="font-semibold text-gray-800">Non, sans scaler</span>
+                          <p className="text-sm text-gray-600">Gammes : MSD, MCTRL</p>
+                        </div>
+                      </label>
                     </div>
-                  </form>
+                    {formData.processeursFiltres.length > 0 && (
+                      <div className="mt-4 p-3 bg-white/70 rounded-lg">
+                        <p className="text-sm font-medium text-gray-700">
+                          {formData.processeursFiltres.length} processeurs disponibles dans cette catégorie
+                        </p>
+                      </div>
+                    )}
+                  </SubSection>
+
+                  <SubSection title="Redondance">
+                    <label className="flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        name="redondance" 
+                        checked={formData.redondance} 
+                        onChange={handleInputChange} 
+                        className="mr-3" 
+                      />
+                      <div>
+                        <span className="font-bold text-gray-700">Redondance nécessaire</span>
+                        <p className="text-sm text-gray-500">Double les équipements pour sécurité maximale</p>
+                      </div>
+                    </label>
+                  </SubSection>
+                </FormSectionCard>
+
+                {/* SECTION 4 - Garantie et services (NOUVEAU) */}
+                <FormSectionCard
+                  title="Garantie et services"
+                  icon="🛡️"
+                  iconBg="bg-gradient-to-r from-green-500 to-emerald-600"
+                >
+                  <SubSection title="Type de garantie">
+                    <div className="space-y-4">
+                      <GarantieOption
+                        value="basique"
+                        title="Basique"
+                        description="Remplacement pièces uniquement"
+                        features={[
+                          "Remplacement des pièces défectueuses",
+                          "Frais de port à la charge du client",
+                          "Support technique par email"
+                        ]}
+                        price="Inclus"
+                        checked={formData.typeGarantie === 'basique'}
+                        onChange={handleInputChange}
+                      />
+                      <GarantieOption
+                        value="standard"
+                        title="Standard"
+                        description="Pièces + Réparation modules"
+                        features={[
+                          "Remplacement des pièces défectueuses",
+                          "Réparation des modules LED",
+                          "Frais de port pris en charge",
+                          "Support technique prioritaire"
+                        ]}
+                        price="+5%"
+                        checked={formData.typeGarantie === 'standard'}
+                        onChange={handleInputChange}
+                      />
+                      <GarantieOption
+                        value="premium"
+                        title="Premium"
+                        description="Pièces + Réparation + Intervention sur site"
+                        features={[
+                          "Toutes les prestations Standard",
+                          "Intervention sur site sous 48h",
+                          "Main d'œuvre incluse",
+                          "Hotline dédiée 7j/7"
+                        ]}
+                        price="+10%"
+                        checked={formData.typeGarantie === 'premium'}
+                        onChange={handleInputChange}
+                      />
+                      <GarantieOption
+                        value="excellence"
+                        title="Excellence"
+                        description="Tout inclus + Assistance à distance"
+                        features={[
+                          "Toutes les prestations Premium",
+                          "Maintenance préventive annuelle",
+                          "Assistance à distance 24/7",
+                          "Remplacement d'urgence sous 24h",
+                          "Formation du personnel incluse"
+                        ]}
+                        price="+15%"
+                        checked={formData.typeGarantie === 'excellence'}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </SubSection>
+
+                  <SubSection title="Durée de garantie">
+                    <select 
+                      name="dureeGarantie" 
+                      value={formData.dureeGarantie} 
+                      onChange={handleInputChange} 
+                      className="input-tech"
+                    >
+                      <option value="1">1 an</option>
+                      <option value="2">2 ans (+5%)</option>
+                      <option value="3">3 ans (+10%)</option>
+                      <option value="5">5 ans (+20%)</option>
+                    </select>
+                  </SubSection>
+                </FormSectionCard>
+
+                {/* SECTION 5 - Délais et livraison */}
+                <FormSectionCard
+                  title="Délais et livraison"
+                  icon="📦"
+                  iconBg="bg-gradient-to-r from-indigo-500 to-purple-600"
+                >
+                  <FieldGrid columns={2}>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-2">Délais souhaités</label>
+                      <input 
+                        type="text" 
+                        name="delaisSouhaite" 
+                        value={formData.delaisSouhaite} 
+                        onChange={handleInputChange} 
+                        className="input-tech" 
+                        placeholder="Ex: 3 semaines" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-2">Conditions de livraison</label>
+                      <select className="input-tech">
+                        <option>Standard - Transporteur</option>
+                        <option>Express - Livraison dédiée</option>
+                        <option>Installation incluse</option>
+                      </select>
+                    </div>
+                  </FieldGrid>
+                </FormSectionCard>
+
+                {/* Boutons de navigation */}
+                <div className="flex justify-between pt-8">
+                  <button 
+                    type="button" 
+                    onClick={() => setCurrentStep(1)} 
+                    className="px-8 py-4 bg-white/80 backdrop-blur-sm border border-gray-300/50 text-gray-700 rounded-xl hover:bg-white/90 transition-all duration-200 font-semibold text-lg"
+                  >
+                    ← Précédent
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn-primary text-lg px-8 py-4 flex items-center"
+                  >
+                    Finaliser la demande 
+                    <span className="ml-3 text-xl">✨</span>
+                  </button>
                 </div>
-              </div>
+              </form>
 
-              {/* Calculs automatiques - AMÉLIORÉS */}
+              {/* Calculs automatiques - Card séparée */}
               {formData.totalPixels > 0 && (
                 <div className="card-tech animate-slideInUp" style={{animationDelay: '0.2s'}}>
                   <div className="p-8">
@@ -802,9 +1304,19 @@ export default function NouvelleDemande() {
 
                       <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-200/50">
                         <div className="text-center">
-                          <div className="text-3xl font-bold text-orange-600 mb-2">{formData.nombreFlightcases}</div>
-                          <div className="text-gray-700 font-semibold mb-1">Flightcases</div>
-                          <div className="text-sm text-gray-500">6 dalles par case</div>
+                          {formData.typeInstallation === 'fixe' ? (
+                            <>
+                              <div className="text-2xl font-bold text-orange-600 mb-2">📦</div>
+                              <div className="text-gray-700 font-semibold mb-1">Caisses bois</div>
+                              <div className="text-sm text-gray-500">Sur mesure selon projet</div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-3xl font-bold text-orange-600 mb-2">{formData.nombreFlightcases}</div>
+                              <div className="text-gray-700 font-semibold mb-1">Flightcases</div>
+                              <div className="text-sm text-gray-500">{formData.typeConditionnementTexte}</div>
+                            </>
+                          )}
                         </div>
                       </div>
 
