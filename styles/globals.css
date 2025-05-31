@@ -1,0 +1,436 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* Variables CSS custom - Tech moderne */
+:root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --secondary: #8b5cf6;
+  --accent: #06b6d4;
+  --accent-dark: #0891b2;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+  --glass-bg: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 20%, #667eea 100%);
+  min-height: 100vh;
+  color: var(--slate-900);
+}
+
+/* Backgrounds tech */
+.bg-tech {
+   background: 
+    radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.10) 0%, transparent 50%),
+    radial-gradient(circle at 40% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+    linear-gradient(135deg, #000000 0%, #0a0a0a 25%, #111111 50%, #0a0a0a 75%, #000000 100%);
+}
+
+.bg-tech-dark {
+  background: 
+    radial-gradient(circle at 30% 40%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
+    linear-gradient(135deg, #000000 0%, #050505 100%);
+}
+
+.bg-glass {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);  
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.bg-glass-dark {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(100, 116, 139, 0.15);
+}
+
+/* Composants modernes */
+.btn-primary {
+  @apply bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105;
+}
+
+.btn-secondary {
+  @apply bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105;
+}
+
+.btn-accent {
+  @apply bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105;
+}
+
+.card-tech {
+  @apply bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 hover:shadow-xl hover:bg-white/95 transition-all duration-300;
+  padding: 1.25rem !important;
+}
+
+.card-tech-dark {
+  @apply bg-slate-800/90 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-700/50 hover:shadow-2xl hover:bg-slate-800/95 transition-all duration-500 transform hover:-translate-y-2;
+}
+
+.input-tech {
+  @apply w-full px-3 py-2 bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 focus:bg-white transition-all duration-300 placeholder-gray-400;
+  font-size: 0.875rem;
+  height: 2.5rem;
+}
+
+.header-tech {
+  @apply bg-white/10 backdrop-blur-lg border-b border-white/20 shadow-lg;
+}
+
+/* Gradients tech */
+.gradient-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-secondary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+/* Animations tech */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+.animate-slideInUp {
+  animation: slideInUp 0.8s ease-out;
+}
+
+/* Icônes tech */
+.icon-tech {
+  @apply w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-lg transform transition-all duration-300 hover:scale-110;
+}
+
+.icon-gradient-1 {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.icon-gradient-2 {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.icon-gradient-3 {
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+}
+
+.icon-gradient-4 {
+  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+}
+
+/* Effets de survol */
+.hover-glow:hover {
+  box-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+}
+
+.hover-glow-cyan:hover {
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.5);
+}
+
+.hover-glow-purple:hover {
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
+}
+
+/* ========================================
+   STYLES NOUVELLE DEMANDE - PROFESSIONNEL  
+   ======================================== */
+
+/* Design compact pour nouvelle demande */
+.nouvelle-demande h1 {
+  font-size: 1.75rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.nouvelle-demande h2 {
+  font-size: 1.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.nouvelle-demande h3 {
+  font-size: 1.25rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.nouvelle-demande label {
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* Espacements réduits */
+.nouvelle-demande .space-y-8 > * + * {
+  margin-top: 1.25rem !important;
+}
+
+.nouvelle-demande .space-y-6 > * + * {
+  margin-top: 1rem !important;
+}
+
+.nouvelle-demande .grid {
+  gap: 1rem !important;
+}
+
+/* Icônes plus petites */
+.nouvelle-demande .w-16.h-16 {
+  width: 3.5rem !important;
+  height: 3.5rem !important;
+}
+
+.nouvelle-demande .w-12.h-12 {
+  width: 3rem !important;
+  height: 3rem !important;
+}
+
+/* SECTIONS PROFESSIONNELLES */
+
+/* Card principale avec padding pour les sections */
+.nouvelle-demande .card-tech {
+  padding: 2rem !important;
+}
+
+/* Sections épurées avec séparateurs subtils */
+.section-form {
+  border-bottom: 1px solid rgba(156, 163, 175, 0.2);
+  padding-bottom: 2rem;
+  margin-bottom: 2rem;
+}
+
+.section-form:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+/* Titres de sections professionnels */
+.section-title-pro {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid rgba(99, 102, 241, 0.1);
+}
+
+.section-title-pro h3 {
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+  margin: 0 !important;
+  letter-spacing: -0.025em;
+}
+
+.section-title-pro .icon-pro {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-right: 0.75rem;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+/* Grilles de champs plus professionnelles */
+.section-fields-pro {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.section-fields-pro.grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.section-fields-pro.grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* Labels plus discrets mais lisibles */
+.nouvelle-demande .section-form label {
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
+  margin-bottom: 0.5rem !important;
+  letter-spacing: -0.025em;
+}
+
+/* Inputs plus raffinés */
+.nouvelle-demande .section-form .input-tech {
+  border: 1px solid rgba(209, 213, 219, 0.8) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  font-size: 0.875rem !important;
+  height: 2.75rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.nouvelle-demande .section-form .input-tech:focus {
+  border-color: #6366f1 !important;
+  ring: 0 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+}
+
+/* Zone nom du projet plus corporate */
+.projet-preview-pro {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.03) 100%) !important;
+  border: 1px solid rgba(99, 102, 241, 0.15) !important;
+  border-radius: 0.75rem !important;
+  padding: 1.5rem !important;
+  margin-bottom: 2rem !important;
+}
+
+.projet-preview-pro h3 {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+  margin-bottom: 0.75rem !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.projet-preview-pro .icon-projet {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  margin-right: 0.75rem !important;
+  color: #6366f1 !important;
+}
+
+/* Adresse complétée plus discrète */
+.adresse-complete {
+  background: rgba(16, 185, 129, 0.04) !important;
+  border: 1px solid rgba(16, 185, 129, 0.15) !important;
+  border-radius: 0.5rem !important;
+  padding: 1rem !important;
+  margin-top: 1rem !important;
+}
+
+.adresse-complete label {
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  color: #6b7280 !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.adresse-complete input {
+  font-size: 0.8rem !important;
+  padding: 0.5rem !important;
+  height: auto !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(209, 213, 219, 0.5) !important;
+}
+
+/* Suggestions d'adresse plus professionnelles */
+.adresse-suggestions {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid rgba(209, 213, 219, 0.3) !important;
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.adresse-suggestions button:hover {
+  background: rgba(99, 102, 241, 0.05) !important;
+}
+
+/* Boutons plus corporate */
+.nouvelle-demande .btn-primary {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.025em !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.nouvelle-demande .btn-primary:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Navigation en bas plus espacée */
+.navigation-buttons {
+  border-top: 1px solid rgba(229, 231, 235, 0.6) !important;
+  padding-top: 2rem !important;
+  margin-top: 2.5rem !important;
+}
+
+/* Progress bar plus compact */
+.nouvelle-demande .py-6 {
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+}
+
+/* Sections avec marges réduites */
+.nouvelle-demande .mb-8 {
+  margin-bottom: 1.5rem !important;
+}
+
+.nouvelle-demande .mb-6 {
+  margin-bottom: 1rem !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card-tech {
+    @apply transform-none hover:transform-none hover:scale-100;
+  }
+
+  /* Responsive compact */
+  .section-fields-pro.grid-2,
+  .section-fields-pro.grid-3 {
+    grid-template-columns: 1fr;
+  }
+  
+  .nouvelle-demande .card-tech {
+    padding: 1.5rem !important;
+  }
+  
+  .section-form {
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .section-title-pro {
+    margin-bottom: 1rem;
+  }
+  
+  .nouvelle-demande .grid {
+    gap: 0.75rem !important;
+  }
+  
+  .input-tech {
+    font-size: 0.875rem !important;
+    height: 2.25rem !important;
+  }
+}
