@@ -67,6 +67,7 @@ export default function NouvelleDemande() {
     typeMedia: '',
     typeEcran: 'standard',
     typeInstallation: '', // 'fixe' ou 'mobile' - NOUVEAU
+    formatDalleSelection: 'auto', // 'auto' ou format spécifique - NOUVEAU
     typeConditionnement: '6', // '6' ou '8' dalles par flight - NOUVEAU
     redondance: false,
     delaisSouhaite: '',
@@ -98,9 +99,10 @@ export default function NouvelleDemande() {
     checkAuth()
   }, [])
 
-  useEffect(() => {
-    calculerSpecifications()
-  }, [formData.largeur, formData.hauteur, formData.surface, formData.ratio, formData.modeCalcul, formData.distanceVision, formData.pitchCalcule, formData.pitchManuel, formData.pitchMode, formData.redondance, formData.besoinScaler, formData.typeInstallation, formData.typeConditionnement, formData.dimensionsPratiques])
+  // DÉSACTIVÉ - Les calculs seront faits par n8n
+  // useEffect(() => {
+  //   calculerSpecifications()
+  // }, [formData.largeur, formData.hauteur, formData.surface, formData.ratio, formData.modeCalcul, formData.distanceVision, formData.pitchCalcule, formData.pitchManuel, formData.pitchMode, formData.redondance, formData.besoinScaler, formData.typeInstallation, formData.typeConditionnement, formData.dimensionsPratiques])
 
   const checkAuth = async () => {
     console.log('🔍 Vérification auth...')
@@ -150,12 +152,102 @@ export default function NouvelleDemande() {
     return processeurs // Tous si pas encore sélectionné
   }
 
-  // Calculs automatiques améliorés
-  const calculerSpecifications = () => {
+  // Collecter les données pour n8n (sans calculs)
+  // Envoyer les données à n8n et recevoir les calculs
+  const envoyerVersN8N = async (donnees) => {
+    try {
+      const response = await fetch('/api/calculer-specifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(donnees)
+      })
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors du calcul')
+      }
+      
+      const resultats = await response.json()
+      return resultats
+    } catch (error) {
+      console.error('Erreur n8n:', error)
+      return null
+    }
+  }
+  
+  const collecterDonneesPourN8N = () => {
+    return {
+      // Informations client
+      client: {
+        nom: formData.nomClient,
+        societe: formData.societeClient,
+        email: formData.emailClient,
+        telephone: formData.telephoneClient,
+        adresse: {
+          numeroRue: formData.numeroRue,
+          nomRue: formData.nomRue,
+          codePostal: formData.codePostal,
+          ville: formData.ville,
+          adresseComplete: formData.adresseComplete
+        }
+      },
+      // Configuration écran
+      ecran: {
+        modeCalcul: formData.modeCalcul,
+        largeur: parseFloat(formData.largeur) || null,
+        hauteur: parseFloat(formData.hauteur) || null,
+        surface: parseFloat(formData.surface) || null,
+        ratio: formData.ratio,
+        dimensionsPratiques: formData.dimensionsPratiques
+      },
+      // Spécifications techniques
+      technique: {
+        distanceVision: parseFloat(formData.distanceVision) || null,
+        pitchMode: formData.pitchMode,
+        pitchManuel: parseFloat(formData.pitchManuel) || null,
+        typeMedia: formData.typeMedia,
+        typeEcran: formData.typeEcran,
+        typeInstallation: formData.typeInstallation,
+        formatDalleSelection: formData.formatDalleSelection,
+        typeConditionnement: formData.typeConditionnement,
+        redondance: formData.redondance,
+        besoinScaler: formData.besoinScaler
+      },
+      // Informations projet
+      projet: {
+        dateEcheance: formData.dateEcheance,
+        budget: parseFloat(formData.budget) || null,
+        delaisSouhaite: formData.delaisSouhaite
+      },
+      // Garantie et services
+      services: {
+        typeGarantie: formData.typeGarantie,
+        dureeGarantie: formData.dureeGarantie,
+        formation: formData.formation,
+        installationSurSite: formData.installationSurSite,
+        supportTechnique: formData.supportTechnique
+      },
+      // Métadonnées
+      metadata: {
+        dateCreation: new Date().toISOString(),
+        version: '1.0'
+      }
+    }
+  }
+  
+  // Ancienne fonction de calcul - DESACTIVEE (sera remplacée par n8n)
+  const calculerSpecifications_OLD = () => {
     let largeurFinal = parseFloat(formData.largeur) || 0
     let hauteurFinal = parseFloat(formData.hauteur) || 0
     let ratioCalcule = 0
     let dimensionsOptimales = { largeur: 0, hauteur: 0 }
+    
+    // DEBUG - Afficher les valeurs initiales
+    console.log('=== DEBUT CALCUL ===')
+    console.log('Mode calcul:', formData.modeCalcul)
+    console.log('Largeur saisie:', formData.largeur, '→ parsée:', largeurFinal)
+    console.log('Hauteur saisie:', formData.hauteur, '→ parsée:', hauteurFinal)
     
     // Mode surface + ratio : calculer les dimensions optimales
     if (formData.modeCalcul === 'surface' && formData.surface) {
@@ -199,6 +291,8 @@ export default function NouvelleDemande() {
     if (formData.modeCalcul === 'dimensions' && largeurFinal && hauteurFinal) {
       ratioCalcule = largeurFinal / hauteurFinal
       dimensionsOptimales = { largeur: largeurFinal, hauteur: hauteurFinal }
+      // DEBUG - Vérifier que les dimensions sont correctes en mode dimensions
+      console.log('Mode dimensions - Valeurs utilisées: L=' + largeurFinal + 'm, H=' + hauteurFinal + 'm')
     }
     
     if (!largeurFinal || !hauteurFinal) {
@@ -218,18 +312,61 @@ export default function NouvelleDemande() {
     const pitchOptimal = distance > 0 ? distance : 6 // Par défaut P6
     const pitchFinal = formData.pitchMode === 'manuel' ? parseFloat(formData.pitchManuel) || pitchOptimal : pitchOptimal
     
-    // Calcul dalles (500mm par défaut)
-    const tailleDalle = 0.5 // 500mm
-    const dallesLargeur = Math.ceil(largeurFinal / tailleDalle)
-    const dallesHauteur = Math.ceil(hauteurFinal / tailleDalle)
-    const nombreDalles = dallesLargeur * dallesHauteur
+    // Calcul dalles avec sélection intelligente du format
+    let formatDalle, dallesLargeur, dallesHauteur, nombreDalles, surfaceReelleEcran, solutionsDalles
     
-    // Calcul pixels
-    const pixelsParDalle = Math.pow(Math.round(500 / pitchFinal), 2) // (500/pitch)²
+    // DEBUG - Afficher les dimensions utilisées pour le calcul
+    console.log('=== CALCUL DALLES ===')
+    console.log('Type installation:', formData.typeInstallation)
+    console.log('Dimensions pour calcul dalles: L=' + largeurFinal + 'm, H=' + hauteurFinal + 'm')
+    
+    if (formData.typeInstallation === 'mobile') {
+      // Pour mobile, on calcule les 3 solutions
+      solutionsDalles = calculerSolutionsDalles(largeurFinal, hauteurFinal, formData.typeInstallation)
+      // On prend la première solution (500x500) comme valeur par défaut pour la compatibilité
+      const solutionDefaut = solutionsDalles[0]
+      formatDalle = solutionDefaut.format
+      dallesLargeur = solutionDefaut.dallesLargeur
+      dallesHauteur = solutionDefaut.dallesHauteur
+      nombreDalles = solutionDefaut.nombreDalles
+      surfaceReelleEcran = solutionDefaut.surfaceReelle
+      
+      // DEBUG - Afficher le résultat du calcul
+      console.log('Solution choisie:', solutionDefaut.nom)
+      console.log('Calcul dalles: ' + largeurFinal + '/0.5=' + (largeurFinal/0.5) + ' → ' + dallesLargeur + ' dalles en largeur')
+      console.log('Calcul dalles: ' + hauteurFinal + '/0.5=' + (hauteurFinal/0.5) + ' → ' + dallesHauteur + ' dalles en hauteur')
+      console.log('Total: ' + dallesLargeur + ' × ' + dallesHauteur + ' = ' + nombreDalles + ' dalles')
+    } else if (formData.typeInstallation === 'fixe') {
+      // Pour fixe, on garde l'ancienne logique
+      formatDalle = choisirFormatDalleOptimal(largeurFinal, hauteurFinal, formData.typeInstallation, formData.formatDalleSelection, pitchFinal)
+      dallesLargeur = Math.ceil(largeurFinal / formatDalle.largeur)
+      dallesHauteur = Math.ceil(hauteurFinal / formatDalle.hauteur)
+      nombreDalles = dallesLargeur * dallesHauteur
+      surfaceReelleEcran = dallesLargeur * formatDalle.largeur * dallesHauteur * formatDalle.hauteur
+    } else {
+      // Si typeInstallation n'est pas défini, utiliser des dalles 500x500 par défaut
+      console.log('ATTENTION: typeInstallation non défini, utilisation de dalles 500x500 par défaut')
+      formatDalle = { nom: '500x500mm', largeur: 0.5, hauteur: 0.5 }
+      dallesLargeur = Math.ceil(largeurFinal / 0.5)
+      dallesHauteur = Math.ceil(hauteurFinal / 0.5)
+      nombreDalles = dallesLargeur * dallesHauteur
+      surfaceReelleEcran = dallesLargeur * 0.5 * dallesHauteur * 0.5
+      
+      // DEBUG
+      console.log('Calcul par défaut: ' + largeurFinal + '/0.5=' + Math.ceil(largeurFinal/0.5) + ' dalles en largeur')
+      console.log('Calcul par défaut: ' + hauteurFinal + '/0.5=' + Math.ceil(hauteurFinal/0.5) + ' dalles en hauteur')
+      console.log('Total par défaut: ' + dallesLargeur + ' × ' + dallesHauteur + ' = ' + nombreDalles + ' dalles')
+    }
+    
+    // Calcul pixels basé sur les dimensions réelles de la dalle
+    // Note: Les dalles font généralement 500x500mm ou 500x1000mm mais la taille exacte sera confirmée par le devis
+    const pixelsLargeurDalle = Math.floor((formatDalle.largeur * 1000) / pitchFinal)
+    const pixelsHauteurDalle = Math.floor((formatDalle.hauteur * 1000) / pitchFinal)
+    const pixelsParDalle = pixelsLargeurDalle * pixelsHauteurDalle
     const totalPixels = nombreDalles * pixelsParDalle
     
     // Calcul équipements
-    const nombreBumpers = dallesLargeur // Nombre de dalles en largeur
+    const nombreBumpers = dallesLargeur // Bumpers = nombre de dalles en largeur uniquement
     
     // Calcul des flightcases selon le type d'installation
     let nombreFlightcases = 0
@@ -253,8 +390,21 @@ export default function NouvelleDemande() {
     const processeurRecommande = trouverProcesseurOptimal(totalPixels, formData.redondance, processeursFiltres)
     const portsNecessaires = calculerPortsNecessaires(totalPixels, processeurRecommande, formData.redondance)
     
+    // DEBUG - Afficher les valeurs finales avant mise à jour
+    console.log('=== VALEURS FINALES ===')
+    console.log('Dimensions finales: L=' + largeurFinal + 'm, H=' + hauteurFinal + 'm')
+    console.log('Dalles calculées: ' + dallesLargeur + ' × ' + dallesHauteur + ' = ' + nombreDalles)
+    console.log('Format dalle:', formatDalle)
+    console.log('======================')
+    
     setFormData(prev => ({
       ...prev,
+      // En mode dimensions, ne pas écraser les valeurs saisies par l'utilisateur
+      // En mode surface, mettre à jour avec les dimensions calculées
+      ...(formData.modeCalcul === 'surface' ? {
+        largeur: largeurFinal,
+        hauteur: hauteurFinal,
+      } : {}),
       surfaceCalculee,
       ratioCalcule,
       dimensionsOptimales,
@@ -270,6 +420,9 @@ export default function NouvelleDemande() {
       pitchCalcule: pitchOptimal,
       processeursFiltres,
       typeConditionnementTexte,
+      formatDalle,
+      surfaceReelleEcran,
+      solutionsDalles,
     }))
   }
 
@@ -290,6 +443,167 @@ export default function NouvelleDemande() {
   }
 
   // Analyser la déformation par rapport aux ratios standards
+  // Définition complète des formats de dalles disponibles
+  const formatsDallesDisponibles = {
+    fixe: [
+      { nom: '500x250mm', largeur: 0.5, hauteur: 0.25, surface: 0.125, pitch: ['1.9', '2.6', '3.9'] },
+      { nom: '750x250mm', largeur: 0.75, hauteur: 0.25, surface: 0.1875, pitch: ['1.9', '2.6', '3.9'] },
+      { nom: '1000x250mm', largeur: 1, hauteur: 0.25, surface: 0.25, pitch: ['1.9', '2.6', '3.9'] },
+      { nom: '1250x250mm', largeur: 1.25, hauteur: 0.25, surface: 0.3125, pitch: ['1.9', '2.6', '3.9'] }
+    ],
+    mobile: [
+      { nom: '500x500mm', largeur: 0.5, hauteur: 0.5, surface: 0.25, pitch: ['1.9', '2.6', '2.9', '3.9'] },
+      { nom: '500x1000mm', largeur: 0.5, hauteur: 1, surface: 0.5, pitch: ['2.6', '3.9'] }
+    ],
+    broadcast: [
+      { nom: '600x337.5mm (16:9)', largeur: 0.6, hauteur: 0.3375, surface: 0.2025, pitch: ['0.9', '1.2', '1.56'] }
+    ]
+  }
+  
+  const calculerSolutionsDalles = (largeur, hauteur, typeInstallation) => {
+    const solutions = []
+    
+    // Solution 1: Uniquement des dalles 500x500
+    const solution500x500 = {
+      nom: 'Dalles 500x500mm uniquement',
+      format: { nom: '500x500mm', largeur: 0.5, hauteur: 0.5 },
+      dallesLargeur: Math.ceil(largeur / 0.5),
+      dallesHauteur: Math.ceil(hauteur / 0.5),
+      nombreDalles: 0,
+      surfaceReelle: 0,
+      configuration: []
+    }
+    solution500x500.nombreDalles = solution500x500.dallesLargeur * solution500x500.dallesHauteur
+    solution500x500.surfaceReelle = solution500x500.dallesLargeur * 0.5 * solution500x500.dallesHauteur * 0.5
+    solutions.push(solution500x500)
+    
+    // Solution 2: Uniquement des dalles 500x1000 (si possible)
+    const dalles1000Largeur = Math.ceil(largeur / 0.5)
+    const dalles1000Hauteur = Math.ceil(hauteur / 1)
+    if (dalles1000Hauteur * 1 <= hauteur + 0.5) { // Vérifie si c'est raisonnable
+      const solution500x1000 = {
+        nom: 'Dalles 500x1000mm uniquement',
+        format: { nom: '500x1000mm', largeur: 0.5, hauteur: 1 },
+        dallesLargeur: dalles1000Largeur,
+        dallesHauteur: dalles1000Hauteur,
+        nombreDalles: dalles1000Largeur * dalles1000Hauteur,
+        surfaceReelle: dalles1000Largeur * 0.5 * dalles1000Hauteur * 1,
+        configuration: []
+      }
+      solutions.push(solution500x1000)
+    }
+    
+    // Solution 3: Solution mixte optimisée
+    const solutionMixte = calculerSolutionMixte(largeur, hauteur)
+    if (solutionMixte) {
+      solutions.push(solutionMixte)
+    }
+    
+    return solutions
+  }
+  
+  const calculerSolutionMixte = (largeur, hauteur) => {
+    const dallesLargeur = Math.ceil(largeur / 0.5)
+    
+    // Calcul du nombre de lignes de 1000mm possibles
+    const lignes1000 = Math.floor(hauteur / 1)
+    const resteHauteur = hauteur - (lignes1000 * 1)
+    
+    // Calcul du nombre de lignes de 500mm nécessaires pour le reste
+    const lignes500 = Math.ceil(resteHauteur / 0.5)
+    
+    if (lignes1000 === 0) return null // Pas de solution mixte intéressante
+    
+    const solution = {
+      nom: 'Solution mixte optimisée',
+      format: { nom: 'Mixte 500x500 + 500x1000', largeur: 0.5, hauteur: 'variable' },
+      configuration: [],
+      nombreDalles: 0,
+      surfaceReelle: 0,
+      details: []
+    }
+    
+    // Ajouter les lignes de 500x1000
+    if (lignes1000 > 0) {
+      const dalles1000 = dallesLargeur * lignes1000
+      solution.configuration.push({
+        type: '500x1000mm',
+        quantite: dalles1000,
+        disposition: `${dallesLargeur} x ${lignes1000} dalles`
+      })
+      solution.nombreDalles += dalles1000
+      solution.details.push(`${lignes1000} ligne(s) de dalles 500x1000mm`)
+    }
+    
+    // Ajouter les lignes de 500x500
+    if (lignes500 > 0) {
+      const dalles500 = dallesLargeur * lignes500
+      solution.configuration.push({
+        type: '500x500mm',
+        quantite: dalles500,
+        disposition: `${dallesLargeur} x ${lignes500} dalles`
+      })
+      solution.nombreDalles += dalles500
+      solution.details.push(`${lignes500} ligne(s) de dalles 500x500mm`)
+    }
+    
+    solution.surfaceReelle = dallesLargeur * 0.5 * (lignes1000 * 1 + lignes500 * 0.5)
+    solution.hauteurReelle = lignes1000 * 1 + lignes500 * 0.5
+    solution.largeurReelle = dallesLargeur * 0.5
+    
+    return solution
+  }
+  
+  const choisirFormatDalleOptimal = (largeur, hauteur, typeInstallation, formatManuel = 'auto', pitch = null) => {
+    // Si un format manuel est spécifié, on le cherche dans la liste
+    if (formatManuel !== 'auto') {
+      const allFormats = [
+        ...formatsDallesDisponibles.fixe,
+        ...formatsDallesDisponibles.mobile,
+        ...formatsDallesDisponibles.broadcast
+      ]
+      const formatTrouve = allFormats.find(f => f.nom === formatManuel)
+      if (formatTrouve) {
+        return formatTrouve
+      }
+    }
+    
+    // Sélection automatique basée sur le pitch pour les dalles broadcast
+    if (pitch && ['0.9', '1.2', '1.56'].includes(pitch.toString())) {
+      return formatsDallesDisponibles.broadcast[0] // 600x337.5mm
+    }
+    
+    if (typeInstallation === 'mobile') {
+      // Pour mobile, on utilise la nouvelle logique avec les 3 solutions
+      const solutions = calculerSolutionsDalles(largeur, hauteur, typeInstallation)
+      // Retourne la première solution (500x500) par défaut pour la compatibilité
+      return solutions[0].format
+    }
+    
+    // Pour fixe, on optimise
+    const formats = formatsDallesDisponibles.fixe
+    let meilleurFormat = formats[0]
+    let meilleurScore = Infinity
+    
+    for (const format of formats) {
+      const nbDallesLargeur = Math.ceil(largeur / format.largeur)
+      const nbDallesHauteur = Math.ceil(hauteur / format.hauteur)
+      const surfaceUtilisee = nbDallesLargeur * format.largeur * nbDallesHauteur * format.hauteur
+      const surfaceDemandee = largeur * hauteur
+      const gaspillage = surfaceUtilisee - surfaceDemandee
+      const nbDallesTotal = nbDallesLargeur * nbDallesHauteur
+      
+      const score = gaspillage + (nbDallesTotal * 0.01)
+      
+      if (score < meilleurScore) {
+        meilleurScore = score
+        meilleurFormat = format
+      }
+    }
+    
+    return meilleurFormat
+  }
+
   const analyserDeformation = (ratioCalcule, ratioCibleOverride = null) => {
     const ratiosStandards = [
       { nom: '16:9', valeur: 16/9, usage: 'Standard HD/4K' },
@@ -912,26 +1226,24 @@ export default function NouvelleDemande() {
                       {formData.dimensionsOptimales.largeur > 0 && (
                         <div className="mt-4 p-4 bg-white/60 rounded-lg border border-gray-200">
                           <p className="font-bold text-gray-800">
-                            📏 Dimensions pour calculs : {(() => {
-                              const ratioValue = getRatioValue(formData.ratio);
-                              const hauteurExacte = Math.sqrt(parseFloat(formData.surface) / ratioValue);
-                              const largeurExacte = hauteurExacte * ratioValue;
-                              
-                              switch(formData.dimensionsPratiques) {
-                                case '10cm':
-                                  return `${(Math.round(largeurExacte * 10) / 10).toFixed(1)}m × ${(Math.round(hauteurExacte * 10) / 10).toFixed(1)}m`;
-                                case '25cm':
-                                  return `${(Math.round(largeurExacte * 4) / 4).toFixed(2)}m × ${(Math.round(hauteurExacte * 4) / 4).toFixed(2)}m`;
-                                case '50cm':
-                                  return `${(Math.round(largeurExacte * 2) / 2).toFixed(1)}m × ${(Math.round(hauteurExacte * 2) / 2).toFixed(1)}m`;
-                                default:
-                                  return `${largeurExacte.toFixed(2)}m × ${hauteurExacte.toFixed(2)}m`;
-                              }
-                            })()}
+                            📏 Dimensions pour calculs : {formData.largeur}m × {formData.hauteur}m
                           </p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            ✅ Surface réelle : {formData.surfaceCalculee.toFixed(2)}m² | Calcul dalles : {formData.dallesLargeur} × {formData.dallesHauteur} = {formData.nombreDalles} dalles
-                          </p>
+                          <div className="mt-3">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const donnees = collecterDonneesPourN8N()
+                                const resultats = await envoyerVersN8N(donnees)
+                                if (resultats) {
+                                  console.log('Résultats n8n:', resultats)
+                                  // TODO: Mettre à jour l'interface avec les résultats
+                                }
+                              }}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                              Calculer via n8n
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1054,6 +1366,33 @@ export default function NouvelleDemande() {
                         </div>
                       )}
                     </FieldGrid>
+                    
+                    {formData.typeInstallation && (
+                      <div className="mt-4">
+                        <label className="block font-bold text-gray-700 mb-2">Format des dalles</label>
+                        <select 
+                          name="formatDalleSelection" 
+                          value={formData.formatDalleSelection} 
+                          onChange={handleInputChange} 
+                          className="input-tech w-full"
+                        >
+                          <option value="auto">Sélection automatique (optimisée)</option>
+                          <optgroup label="Installation fixe">
+                            <option value="500x250mm">500×250mm</option>
+                            <option value="750x250mm">750×250mm</option>
+                            <option value="1000x250mm">1000×250mm</option>
+                            <option value="1250x250mm">1250×250mm</option>
+                          </optgroup>
+                          <optgroup label="Installation mobile">
+                            <option value="500x500mm">500×500mm</option>
+                            <option value="500x1000mm">500×1000mm</option>
+                          </optgroup>
+                          <optgroup label="Broadcast (COB)">
+                            <option value="600x337.5mm (16:9)">600×337.5mm (16:9 - Pitch 0.9/1.2/1.56)</option>
+                          </optgroup>
+                        </select>
+                      </div>
+                    )}
                     
                     {formData.typeInstallation && (
                       <div className="mt-4 p-4 bg-white/60 rounded-lg border border-gray-200">
@@ -1263,8 +1602,8 @@ export default function NouvelleDemande() {
                 </div>
               </form>
 
-              {/* Calculs automatiques - Card séparée */}
-              {formData.totalPixels > 0 && (
+              {/* Calculs automatiques - DESACTIVE (sera fait par n8n) */}
+              {/* {formData.totalPixels > 0 && (
                 <div className="card-tech animate-slideInUp" style={{animationDelay: '0.2s'}}>
                   <div className="p-8">
                     <div className="flex items-center mb-6">
@@ -1283,6 +1622,11 @@ export default function NouvelleDemande() {
                           <div className="text-3xl font-bold text-blue-600 mb-2">{formData.nombreDalles}</div>
                           <div className="text-gray-700 font-semibold mb-1">Dalles nécessaires</div>
                           <div className="text-sm text-gray-500">{formData.dallesLargeur} × {formData.dallesHauteur} (L×H)</div>
+                          {formData.formatDalle && (
+                            <div className="text-xs bg-white/50 px-3 py-1 rounded-full inline-block mt-2">
+                              Format: {formData.formatDalle.nom}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1337,18 +1681,55 @@ export default function NouvelleDemande() {
                       )}
                     </div>
 
+                    {formData.solutionsDalles && formData.typeInstallation === 'mobile' ? (
+                      <div className="mt-6 space-y-4">
+                        <h4 className="font-semibold text-gray-800 text-center">Options de configuration des dalles</h4>
+                        {formData.solutionsDalles.map((solution, index) => (
+                          <div key={index} className="p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl border border-gray-200/50">
+                            <h5 className="font-semibold text-gray-700 mb-2">{solution.nom}</h5>
+                            <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                              <p>Nombre de dalles: {solution.nombreDalles}</p>
+                              <p>Surface réelle: {solution.surfaceReelle.toFixed(2)} m²</p>
+                              {solution.configuration && solution.configuration.map((config, i) => (
+                                <p key={i} className="col-span-2">
+                                  • {config.quantite} × {config.type} ({config.disposition})
+                                </p>
+                              ))}
+                              {solution.details && solution.details.map((detail, i) => (
+                                <p key={i} className="col-span-2 text-xs italic">→ {detail}</p>
+                              ))}
+                              {solution.hauteurReelle && (
+                                <p className="col-span-2">Dimensions: {solution.largeurReelle.toFixed(2)}m × {solution.hauteurReelle.toFixed(2)}m</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : formData.surfaceReelleEcran && formData.surfaceCalculee && (
+                      <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl border border-gray-200/50">
+                        <div className="text-center">
+                          <h4 className="font-semibold text-gray-800 mb-2">Dimensions réelles de l'écran</h4>
+                          <div className="text-sm text-gray-600">
+                            <p>Surface demandée: {formData.surfaceCalculee.toFixed(2)} m²</p>
+                            <p>Surface réelle: {formData.surfaceReelleEcran.toFixed(2)} m²</p>
+                            <p>Dimensions réelles: {(formData.dallesLargeur * formData.formatDalle.largeur).toFixed(2)}m × {(formData.dallesHauteur * formData.formatDalle.hauteur).toFixed(2)}m</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="mt-8 p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl border border-yellow-200/50">
                       <div className="flex items-start">
                         <span className="text-2xl mr-4">⚠️</span>
                         <div>
                           <h4 className="font-bold text-gray-800 mb-2">Note importante</h4>
-                          <p className="text-gray-700">Ces calculs sont des estimations basées sur des valeurs standards (dalles 500×500mm). Les spécifications exactes seront confirmées par le devis fournisseur chinois.</p>
+                          <p className="text-gray-700">Ces calculs sont des estimations basées sur des dalles standards (500×500mm ou 500×1000mm). La taille exacte des dalles et les spécifications finales seront confirmées par le devis du fournisseur chinois. Le pitch (P3.9, P6, etc.) indique l'espacement entre les pixels, pas la taille des dalles.</p>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              )}
+              )} */}
             </div>
           )}
         </main>

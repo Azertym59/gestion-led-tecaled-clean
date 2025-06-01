@@ -1,0 +1,28 @@
+Reference,Serie,Model,Pixel_Pitch,LED_Type,Module_Size,Cabinet_Size,Weight_kg,Price_USD_m2,Refresh_Rate,Brightness_nits,Receiving_Card,Stock_Location,Application,Maintien
+LEDTOP-GOKU-PRO-P19-1000,Goku Pro,Goku Pro 1.9,1.9mm,SMD1515,250x250,1000x250,-,1250,3840,-,A5s plus,Europe,Installation fixe premium,Front/Arrière
+LEDTOP-GOKU-PRO-P19-750,Goku Pro,Goku Pro 1.9,1.9mm,SMD1515,250x250,750x250,-,1380,3840,-,A5s plus,Europe,Installation fixe premium,Front/Arrière
+LEDTOP-GOKU-PRO-P19-500,Goku Pro,Goku Pro 1.9,1.9mm,SMD1515,250x250,500x250,-,1630,3840,-,A5s plus,Europe,Installation fixe premium,Front/Arrière
+LEDTOP-GOKU-PRO-P26-1000,Goku Pro,Goku Pro 2.6,2.6mm,SMD1515,250x250,1000x250,-,800,3840,-,A5s plus,Europe,Installation fixe standard,Front/Arrière
+LEDTOP-GOKU-PRO-P26-750,Goku Pro,Goku Pro 2.6,2.6mm,SMD1515,250x250,750x250,-,930,3840,-,A5s plus,Europe,Installation fixe standard,Front/Arrière
+LEDTOP-GOKU-PRO-P26-500,Goku Pro,Goku Pro 2.6,2.6mm,SMD1515,250x250,500x250,-,1180,3840,-,A5s plus,Europe,Installation fixe standard,Front/Arrière
+LEDTOP-GOKU-PRO-EMPTY-1000,Goku Pro,Goku Pro Empty,-,Without modules,-,1000x250,-,80,-,-,A5s plus,Europe,Cabinet vide,Front/Arrière
+LEDTOP-GOKU-PRO-EMPTY-750,Goku Pro,Goku Pro Empty,-,Without modules,-,750x250,-,85,-,-,A5s plus,Europe,Cabinet vide,Front/Arrière
+LEDTOP-GOKU-PRO-EMPTY-500,Goku Pro,Goku Pro Empty,-,Without modules,-,500x250,-,88,-,-,A5s plus,Europe,Cabinet vide,Front/Arrière
+LEDTOP-GOKU-STD-P19-1250,Goku Standard,Goku 1.9,1.9mm,SMD1515,250x250,1250x250,-,Sur demande,3840,800,A5s plus,Chine,Installation fixe flexible,Front/Arrière
+LEDTOP-GOKU-STD-P26-1250,Goku Standard,Goku 2.6,2.6mm,SMD1515,250x250,1250x250,-,Sur demande,3840,800,A5s plus,Chine,Installation fixe flexible,Front/Arrière
+LEDTOP-DRAGON-P19-500,Dragon,Dragon 1.9,1.9mm,SMD (Anti-collision),250x250,500x500,7.2,Sur demande,3840-7680,800,3-in-1 integrated,Europe/USA,Location premium indoor,Front
+LEDTOP-DRAGON-P26-500,Dragon,Dragon 2.6,2.6mm,SMD (Anti-collision),250x250,500x500,7.2,Sur demande,3840,800,3-in-1 integrated,Europe,Location indoor standard,Front
+LEDTOP-DRAGON-P26-1000,Dragon,Dragon 2.6,2.6mm,SMD (Anti-collision),250x250,500x1000,14.4,Sur demande,3840,800,3-in-1 integrated,Europe,Location indoor rapide,Front
+LEDTOP-DRAGON-P39-500-OUT,Dragon,Dragon 3.9 Outdoor,3.9mm,SMD,250x250,500x500,7.5,Sur demande,3840,4500,3-in-1 integrated,USA,Location outdoor,Front
+LEDTOP-DRAGON-P39-1000-OUT,Dragon,Dragon 3.9 Outdoor,3.9mm,SMD,250x250,500x1000,15.0,Sur demande,3840,4500,3-in-1 integrated,USA,Location outdoor rapide,Front
+LEDTOP-LEOPARD-P26-500-GOB,Leopard,Leopard 2.6 GOB,2.6mm,SMD + GOB,250x250,500x500,5.0,Sur demande,3840,800,Intégrée,USA,Location ultra-légère,Front/Arrière
+LEDTOP-LEOPARD-P26-500-STD,Leopard,Leopard 2.6,2.6mm,SMD,250x250,500x500,5.0,Sur demande,3840,800,Intégrée,USA,Location ultra-légère,Front/Arrière
+LEDTOP-TIGER-P26-500,Tiger,Tiger 2.6,2.6mm,SMD,250x250,500x500,7.0,Sur demande,3840,1000,3-in-1 integrated,Chine,Location économique,Front
+LEDTOP-TIGER-P29-500,Tiger,Tiger 2.9,2.9mm,SMD,250x250,500x500,7.0,Sur demande,3840,1000,3-in-1 integrated,Chine,Location économique,Front
+LEDTOP-DT-P29-500,DT,DT 2.9,2.9mm,SMD,250x250,500x500,7.0,Sur demande,3000,1000,Intégrée,Chine,Conférences,Front
+LEDTOP-MURAL-P19-1000,Mural,Mural 1.9,1.9mm,SMD1515,250x250,1000x250,6.5,Sur demande,3840,800,Intégrée,Chine,Installation fixe directe,Front uniquement
+LEDTOP-MURAL-P26-1000,Mural,Mural 2.6,2.6mm,SMD1515,250x250,1000x250,6.5,Sur demande,3840,800,Intégrée,Chine,Installation fixe directe,Front uniquement
+LEDTOP-PHOENIX-P39-500,Phoenix,Phoenix 3.9,3.9mm,SMD,250x250,500x500,22.5,Sur demande,3840,4500,Intégrée,Chine,DOOH économe 50%,Front/Arrière
+LEDTOP-COB-P09-600x337,COB 16:9,COB 0.9,0.9mm,COB MiniLED,300x168.75,600x337.5,5.5,Sur demande,7680,800,Intégrée,Chine,Studios TV premium,Front
+LEDTOP-COB-P12-600x337,COB 16:9,COB 1.2,1.2mm,COB MiniLED,300x168.75,600x337.5,5.5,Sur demande,7680,800,Intégrée,Chine,Studios TV standard,Front
+LEDTOP-COB-P156-600x337,COB 16:9,COB 1.56,1.56mm,COB MiniLED,300x168.75,600x337.5,5.5,Sur demande,7680,800,Intégrée,Chine,Broadcast HD,Front
